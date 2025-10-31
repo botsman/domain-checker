@@ -1,7 +1,9 @@
 module github.com/botsman/domain-checker
 
-go 1.21
+go 1.24.0
 
-require github.com/likexian/whois v1.15.1
+toolchain go1.24.4
 
-require golang.org/x/net v0.17.0 // indirect
+require github.com/likexian/whois v1.15.6
+
+require golang.org/x/net v0.46.0 // indirect
