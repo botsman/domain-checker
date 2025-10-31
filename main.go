@@ -18,7 +18,6 @@ type Config struct {
 }
 
 func main() {
-	// Define CLI flags
 	keywords := flag.String("keywords", "", "Comma-separated keywords (e.g., 'one,two,three')")
 	keywordLists := flag.String("lists", "", "Semicolon-separated lists of keywords (e.g., 'one,two;three,four')")
 	combinations := flag.Int("combinations", 2, "Number of keywords to combine (ignored if lists provided)")
@@ -45,7 +44,6 @@ func main() {
 
 	flag.Parse()
 
-	// Validate input
 	if *keywords == "" && *keywordLists == "" {
 		fmt.Fprintf(os.Stderr, "Error: Either -keywords or -lists must be provided\n\n")
 		flag.Usage()
@@ -58,7 +56,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Parse configuration
 	config := Config{
 		Combinations: *combinations,
 		TLDs:         parseTLDs(*tlds),
@@ -69,14 +66,12 @@ func main() {
 		config.Separator = "-"
 	}
 
-	// Parse keywords
 	if *keywordLists != "" {
 		config.Keywords = parseKeywordLists(*keywordLists)
 	} else {
 		config.Keywords = [][]string{parseKeywords(*keywords)}
 	}
 
-	// Generate domain combinations
 	domains := generateDomains(config)
 
 	if len(domains) == 0 {
@@ -86,10 +81,8 @@ func main() {
 
 	fmt.Printf("Checking %d domains...\n\n", len(domains))
 
-	// Check domains concurrently
 	results := checkDomainsConcurrently(domains, *workers)
 
-	// Print results
 	printResults(results)
 }
 
@@ -120,7 +113,6 @@ func parseKeywordLists(input string) [][]string {
 func parseTLDs(input string) []string {
 	tlds := parseKeywords(input)
 	for i := range tlds {
-		// Remove leading dot if present
 		tlds[i] = strings.TrimPrefix(tlds[i], ".")
 	}
 	return tlds
@@ -130,7 +122,6 @@ func generateDomains(config Config) []string {
 	var domains []string
 
 	if len(config.Keywords) == 1 {
-		// Single list mode - generate combinations
 		combinations := generateCombinations(config.Keywords[0], config.Combinations)
 		for _, combo := range combinations {
 			domainName := strings.Join(combo, config.Separator)
@@ -139,7 +130,6 @@ func generateDomains(config Config) []string {
 			}
 		}
 	} else {
-		// Multiple lists mode - cross product
 		crossProducts := crossProduct(config.Keywords)
 		for _, product := range crossProducts {
 			domainName := strings.Join(product, config.Separator)
@@ -193,7 +183,6 @@ func crossProduct(lists [][]string) [][]string {
 		return result
 	}
 
-	// Recursive cross product
 	subProduct := crossProduct(lists[1:])
 	var result [][]string
 
@@ -219,7 +208,6 @@ func checkDomainsConcurrently(domains []string, workers int) []DomainResult {
 	jobs := make(chan string, len(domains))
 	results := make(chan DomainResult, len(domains))
 
-	// Start workers
 	var wg sync.WaitGroup
 	for i := 0; i < workers; i++ {
 		wg.Add(1)
@@ -236,19 +224,16 @@ func checkDomainsConcurrently(domains []string, workers int) []DomainResult {
 		}()
 	}
 
-	// Send jobs
 	for _, domain := range domains {
 		jobs <- domain
 	}
 	close(jobs)
 
-	// Wait for all workers to finish
 	go func() {
 		wg.Wait()
 		close(results)
 	}()
 
-	// Collect results
 	var allResults []DomainResult
 	for result := range results {
 		allResults = append(allResults, result)
@@ -263,10 +248,8 @@ func checkDomain(domain string) (bool, error) {
 		return false, err
 	}
 
-	// Simple heuristic: if the result contains these keywords, domain is likely taken
 	result = strings.ToLower(result)
 	
-	// Check for common "domain available" indicators
 	if strings.Contains(result, "no match") ||
 		strings.Contains(result, "not found") ||
 		strings.Contains(result, "no entries found") ||
@@ -276,7 +259,6 @@ func checkDomain(domain string) (bool, error) {
 		return true, nil
 	}
 
-	// Check for common "domain taken" indicators
 	if strings.Contains(result, "domain name:") ||
 		strings.Contains(result, "registrar:") ||
 		strings.Contains(result, "creation date:") ||
@@ -285,7 +267,6 @@ func checkDomain(domain string) (bool, error) {
 		return false, nil
 	}
 
-	// If we can't determine, assume it's taken (safer assumption)
 	return false, nil
 }
 
@@ -304,7 +285,6 @@ func printResults(results []DomainResult) {
 		}
 	}
 
-	// Print available domains
 	if len(available) > 0 {
 		fmt.Printf("✓ AVAILABLE (%d):\n", len(available))
 		for _, domain := range available {
@@ -313,7 +293,6 @@ func printResults(results []DomainResult) {
 		fmt.Println()
 	}
 
-	// Print taken domains
 	if len(taken) > 0 {
 		fmt.Printf("✗ TAKEN (%d):\n", len(taken))
 		for _, domain := range taken {
@@ -322,7 +301,6 @@ func printResults(results []DomainResult) {
 		fmt.Println()
 	}
 
-	// Print errors
 	if len(errors) > 0 {
 		fmt.Printf("⚠ ERRORS (%d):\n", len(errors))
 		for _, result := range errors {
@@ -331,7 +309,6 @@ func printResults(results []DomainResult) {
 		fmt.Println()
 	}
 
-	// Summary
 	fmt.Printf("Summary: %d available, %d taken, %d errors (total: %d)\n",
 		len(available), len(taken), len(errors), len(results))
 }
